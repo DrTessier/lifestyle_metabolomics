@@ -1,0 +1,6 @@
+# Point biserial correlations for individual healthy lifestyle factors with the healthy lifestyle metabolomics signature
+cor.test(datavar$bmi_factor_op, datavar$healthy_lifestyle_predict_score) 
+cor.test(datavar$AHEI_factor_op, datavar$healthy_lifestyle_predict_score)
+cor.test(datavar$alco_factor_op, datavar$healthy_lifestyle_predict_score)
+cor.test(datavar$phys_act_factor_op, datavar$healthy_lifestyle_predict_score) 
+cor.test(datavar$smoke_factor_op, datavar$healthy_lifestyle_predict_score) 

@@ -1,0 +1,70 @@
+library(tidyverse)
+library(dplyr)
+library(glmnet)
+library(gtools)
+library(missRanger)
+library(moments)
+
+
+## Handle missing metabolites 
+all_metabolites <- data.frame(met_var=colnames(datavar[,1:396]), missing <- round(colMeans(is.na(datavar[,1:396])), 4)) 
+sum(all_metabolites$missing<0.25) 
+
+metabolites_below25_HMDB <- as.character(all_metabolites[all_metabolites$missing<0.25,"met_var"]) 
+metabolites_below25 <- datavar[, (colnames(datavar) %in% metabolites_below25_HMDB)] 
+
+datavar2 <- datavar[((rownames(datavar) %in% all_metabolites$met_var) & !(rownames(datavar) %in% metabolites_below25_HMDB)), ] 
+table(datavar2$mean_icc<0.3)
+
+# calculate skewness
+metskewness <- data.frame(hmdb=colnames(metabolites_below25), skew=NA)
+for (i in 1:243){
+  metskewness[i,2]=skewness(metabolites_below25[,i], na.rm=T)
+}
+
+# log transform -2<skew<2
+sum(abs(metskewness$skew)>2) 
+metnormal <- as.character(metskewness %>% filter(abs(skew)<2) %>% pull(hmdb)) 
+metskew <- as.character(metskewness %>% filter(abs(skew)>2) %>% pull(hmdb)) 
+temp_normal <- metabolites_below25 %>% select(all_of(metnormal))
+temp_skew <- metabolites_below25 %>% select(all_of(metskew))
+
+temp_skew_ln <- log(temp_skew)
+temp_new <- cbind(temp_normal, temp_skew_ln)
+temp_new$run_id <- datavar$run_id
+
+
+## Transform to z score
+z_score <- function(metab) {
+  if (length(metab)<1) {
+    return(metab)
+  } else {
+
+    avg = mean(metab, na.rm = TRUE)
+    std = sd(metab, na.rm = TRUE)
+
+    for (i in 1:length(metab)) {
+      if (!is.na(metab[i])) {
+        metab[i] = (metab[i] - avg)/std
+      } else {
+        metab[i] = NA
+      }
+    }
+    return(metab)
+  }
+}
+
+z_tranb <- function(dataset, metab_col) {
+  z.data = dataset
+  for (j in 1:metab_col) {
+    # the ave function makes the z_score function operate on column j, stratifed by labcode
+    z.data[,j] = ave(dataset[,j], dataset$run_id, FUN = z_score)
+  }
+  return(z.data)
+}
+
+datavar <- z_tranb(temp_new, 243)
+
+
+## Impute metabolites for those with less than 25% missing using MissRanger
+imputed_metabolites <- missRanger(datavar[, 1:243], num.trees=100, seed=1234)

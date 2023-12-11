@@ -1,0 +1,230 @@
+#### Metabolome-wide associations: linear regressions between individual metabolites and the self-reported healthy lifestyle score; and logistic regressions between between individual metabolites and the self-reported healthy lifestyle components
+
+## set as factors
+factor=c("white", "fast", "multivit", "htn", "hchol", "diab", "hbpmed", "cholmed", "mifh", "dbfh",
+         "cacoall", "labcode", "cohort", "smoke_factor_op", "bmi_factor_op", "alco_factor_op", "AHEI_factor_op", "phys_act_factor_op") 
+for (i in 1:length(factor)){
+  datavar[, factor[i]]=as.factor(datavar[, factor[i]])
+}
+
+# Create metabolites matrix
+metabolites_matrix <- AllCohorts_clean_ztransformed[,1:243]
+colnames(metabolites_matrix)
+
+## Linear regression models for the self-reported healthy lifestyle score
+linear_model1_output <- lapply(1:ncol(metabolites_matrix), function(x) glm(healthy_lifestyle_score_AHEI ~ metabolites_matrix[,x] + agemo + fast + cacoall + cohort + endpoint, data = datavar, family = "gaussian"))
+
+summaries <- lapply(linear_model1_output, summary)
+mycoef <- lapply(summaries, function(x) round(x$coefficients[2,1],2))
+mylowerbound <- lapply(summaries, function(x) round(x$coefficients[2,1] -1.96*x$coefficients[2,2], 2))
+myupperbound <- lapply(summaries, function(x) round(x$coefficients[2,1] +1.96*x$coefficients[2,2], 2))
+pvalue <- lapply(summaries, function(x) x$coefficients[2,4])
+pvalue_bon <- as.list(p.adjust(pvalue, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_fdr <- as.list(p.adjust(pvalue, method="BH", n=length(metabolites_matrix)))
+
+linear_model2_output <- lapply(1:ncol(metabolites_matrix), function(x) glm(healthy_lifestyle_score_AHEI ~ metabolites_matrix[,x] 
+  + fast + agemo + white + multivit + diab + htn + hchol + hbpmed + cholmed + calor_avg + cacoall + cohort + endpoint, data = datavar, family = "gaussian"))
+
+summaries_2 <- lapply(linear_model2_output, summary)
+mycoef_2 <- lapply(summaries_2, function(x) round(x$coefficients[2,1],2))
+mycoef_2_unround <- lapply(summaries_2, function(x) x$coefficients[2,1]) #for volcano plot
+mylowerbound_2 <- lapply(summaries_2, function(x) round(x$coefficients[2,1] -1.96*x$coefficients[2,2],2))
+myupperbound_2 <- lapply(summaries_2, function(x) round(x$coefficients[2,1] +1.96*x$coefficients[2,2],2))
+pvalue_2 <- lapply(summaries_2, function(x) x$coefficients[2,4])
+pvalue_2_bon <- as.list(p.adjust(pvalue_2, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_2_fdr <- as.list(p.adjust(pvalue_2, method="BH", n=length(metabolites_matrix)))
+
+
+together <- paste(format(mycoef_2), " (",
+       format(mylowerbound_2), "$ ",
+       format(myupperbound_2), ") ", sep="")
+
+### writing out the results file
+m1 <- c()
+m1 <- cbind(colnames(metabolites_matrix), mycoef, mylowerbound, myupperbound, pvalue, pvalue_bon, pvalue_fdr, mycoef_2, mylowerbound_2, myupperbound_2, pvalue_2, pvalue_2_bon, pvalue_2_fdr, together)
+colnames(m1) <- c("Metabolite", "Beta-mod1", "LB-mod1", "UB-mod1", "p-value-mod1", "p-value-mod1-bon", "p-value-mod1-fdr", "Beta-mod2", "LB-mod2", "UB-mod2", "p-value-mod2", "p-value-mod2-bon", "p-value-mod2-fdr", "together")
+
+
+## Logistic regressions for diet
+
+log_model1_output_diet <- lapply(1:ncol(metabolites_matrix), function(x) glm(AHEI_factor_op ~ metabolites_matrix[,x] + agemo + fast + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_diet <- lapply(log_model1_output_diet, summary)
+mycoef_diet <- lapply(summaries_diet, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_diet <- lapply(summaries_diet, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_diet <- lapply(summaries_diet, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_diet <- lapply(summaries_diet, function(x) x$coefficients[2,4])
+pvalue_diet_bon <- as.list(p.adjust(pvalue_diet, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_diet_fdr <- as.list(p.adjust(pvalue_diet, method="BH", n=length(metabolites_matrix)))
+
+
+log_model2_output_diet <- lapply(1:ncol(metabolites_matrix), function(x) glm(AHEI_factor_op ~ metabolites_matrix[,x] 
+  + fast + agemo + white + smoke_factor_op + bmi_factor_op + alco_factor_op + phys_act_factor_op + multivit + diab + htn + hchol + hbpmed + cholmed + calor_avg + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_diet_2 <- lapply(log_model2_output_diet, summary)
+mycoef_diet_2 <- lapply(summaries_diet_2, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_diet_2 <- lapply(summaries_diet_2, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_diet_2 <- lapply(summaries_diet_2, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_diet_2 <- lapply(summaries_diet_2, function(x) x$coefficients[2,4])
+pvalue_diet_2_bon <- as.list(p.adjust(pvalue_diet_2, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_diet_2_fdr <- as.list(p.adjust(pvalue_diet_2, method="BH", n=length(metabolites_matrix)))
+
+
+together_diet <- paste(format(mycoef_diet_2, nsmall=2), " (",
+       format(mylowerbound_diet_2, nsmall=2), "$ ",
+       format(myupperbound_diet_2, nsmall=2), ") ", sep="")
+
+## writing out the results file for diet
+m1_diet <- c()
+m1_diet <- cbind(colnames(metabolites_matrix), mycoef_diet, mylowerbound_diet, myupperbound_diet, pvalue_diet, pvalue_diet_bon, pvalue_diet_fdr, mycoef_diet_2, mylowerbound_diet_2, myupperbound_diet_2, pvalue_diet_2, pvalue_diet_2_bon, pvalue_diet_2_fdr, together_diet)
+colnames(m1_diet) <- c("Metabolite", "OR-mod1", "LB-mod1", "UB-mod1", "p-value-mod1", "p-value-mod1-bon", "p-value-mod1-fdr", "OR-mod2", "LB-mod2", "UB-mod2", "p-value-mod2", "p-value-mod2-bon", "p-value-mod2-fdr", "together")
+
+
+## Logistic regressions for smoking
+
+log_model1_output_smoke <- lapply(1:ncol(metabolites_matrix), function(x) glm(smoke_factor_op ~ metabolites_matrix[,x] + agemo + fast + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_smoke <- lapply(log_model1_output_smoke, summary)
+mycoef_smoke <- lapply(summaries_smoke, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_smoke <- lapply(summaries_smoke, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_smoke <- lapply(summaries_smoke, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_smoke <- lapply(summaries_smoke, function(x) x$coefficients[2,4])
+pvalue_smoke_bon <- as.list(p.adjust(pvalue_smoke, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_smoke_fdr <- as.list(p.adjust(pvalue_smoke, method="BH", n=length(metabolites_matrix)))
+
+
+log_model2_output_smoke <- lapply(1:ncol(metabolites_matrix), function(x) glm(smoke_factor_op ~ metabolites_matrix[,x] 
+  + fast + agemo + white + AHEI_factor_op + bmi_factor_op + alco_factor_op + phys_act_factor_op + multivit + diab + htn + hchol + hbpmed + cholmed + calor_avg + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_smoke_2 <- lapply(log_model2_output_smoke, summary)
+mycoef_smoke_2 <- lapply(summaries_smoke_2, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_smoke_2 <- lapply(summaries_smoke_2, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_smoke_2 <- lapply(summaries_smoke_2, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_smoke_2 <- lapply(summaries_smoke_2, function(x) x$coefficients[2,4])
+pvalue_smoke_2_bon <- as.list(p.adjust(pvalue_smoke_2, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_smoke_2_fdr <- as.list(p.adjust(pvalue_smoke_2, method="BH", n=length(metabolites_matrix)))
+
+
+together_smoke <- paste(format(mycoef_smoke_2, nsmall=2), " (",
+       format(mylowerbound_smoke_2, nsmall=2), "$ ",
+       format(myupperbound_smoke_2, nsmall=2), ") ", sep="")
+
+
+## writing out the results file for SMOKE 
+m1_smoke <- c()
+m1_smoke <- cbind(colnames(metabolites_matrix), mycoef_smoke, mylowerbound_smoke, myupperbound_smoke, pvalue_smoke, pvalue_smoke_bon, pvalue_smoke_fdr, mycoef_smoke_2, mylowerbound_smoke_2, myupperbound_smoke_2, pvalue_smoke_2, pvalue_smoke_2_bon,pvalue_smoke_2_fdr, together_smoke)
+colnames(m1_smoke) <- c("Metabolite", "OR-mod1", "LB-mod1", "UB-mod1", "p-value-mod1", "p-value-mod1-bon", "p-value-mod1-fdr", "OR-mod2", "LB-mod2", "UB-mod2", "p-value-mod2", "p-value-mod2-bon", "p-value-mod2-fdr", "together")
+
+## Logistic regressions for alcohol
+
+log_model1_output_alco <- lapply(1:ncol(metabolites_matrix), function(x) glm(alco_factor_op ~ metabolites_matrix[,x] + agemo + fast + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_alco <- lapply(log_model1_output_alco, summary)
+mycoef_alco <- lapply(summaries_alco, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_alco <- lapply(summaries_alco, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_alco <- lapply(summaries_alco, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_alco <- lapply(summaries_alco, function(x) x$coefficients[2,4])
+pvalue_alco_bon <- as.list(p.adjust(pvalue_alco, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_alco_fdr <- as.list(p.adjust(pvalue_alco, method="BH", n=length(metabolites_matrix)))
+
+
+log_model2_output_alco <- lapply(1:ncol(metabolites_matrix), function(x) glm(alco_factor_op ~ metabolites_matrix[,x] 
+  + fast + agemo + white + AHEI_factor_op + bmi_factor_op + phys_act_factor_op + smoke_factor_op + multivit + diab + htn + hchol + hbpmed + cholmed + calor_avg + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_alco_2 <- lapply(log_model2_output_alco, summary)
+mycoef_alco_2 <- lapply(summaries_alco_2, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_alco_2 <- lapply(summaries_alco_2, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_alco_2 <- lapply(summaries_alco_2, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_alco_2 <- lapply(summaries_alco_2, function(x) x$coefficients[2,4])
+pvalue_alco_2_bon <- as.list(p.adjust(pvalue_alco_2, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_alco_2_fdr <- as.list(p.adjust(pvalue_alco_2, method="BH", n=length(metabolites_matrix)))
+
+
+together_alco <- paste(format(mycoef_alco_2, nsmall=2), " (",
+       format(mylowerbound_alco_2, nsmall=2), "$ ",
+       format(myupperbound_alco_2, nsmall=2), ") ", sep="")
+
+## writing out the results file for ALCOHOL
+m1_alco <- c()
+m1_alco <- cbind(colnames(metabolites_matrix), mycoef_alco, mylowerbound_alco, myupperbound_alco, pvalue_alco, pvalue_alco_bon, pvalue_alco_fdr, mycoef_alco_2, mylowerbound_alco_2, myupperbound_alco_2, pvalue_alco_2, pvalue_alco_2_bon, pvalue_alco_2_fdr, together_alco)
+colnames(m1_alco) <- c("Metabolite", "OR-mod1", "LB-mod1", "UB-mod1", "p-value-mod1", "p-value-mod1-bon", "p-value-mod1-fdr", "OR-mod2", "LB-mod2", "UB-mod2", "p-value-mod2", "p-value-mod2-bon", "p-value-mod2-fdr", "together")
+
+
+## Logistic regressions for physical activity level
+
+log_model1_output_pal <- lapply(1:ncol(metabolites_matrix), function(x) glm(phys_act_factor_op ~ metabolites_matrix[,x] + agemo + fast + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_pal <- lapply(log_model1_output_pal, summary)
+mycoef_pal <- lapply(summaries_pal, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_pal <- lapply(summaries_pal, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_pal <- lapply(summaries_pal, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_pal <- lapply(summaries_pal, function(x) x$coefficients[2,4])
+pvalue_pal_bon <- as.list(p.adjust(pvalue_pal, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_pal_fdr <- as.list(p.adjust(pvalue_pal, method="BH", n=length(metabolites_matrix)))
+
+
+log_model2_output_pal <- lapply(1:ncol(metabolites_matrix), function(x) glm(phys_act_factor_op ~ metabolites_matrix[,x] 
+  + fast + agemo + white + AHEI_factor_op + bmi_factor_op + smoke_factor_op + alco_factor_op + multivit + diab + htn + hchol + hbpmed + cholmed + calor_avg + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_pal_2 <- lapply(log_model2_output_pal, summary)
+mycoef_pal_2 <- lapply(summaries_pal_2, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_pal_2 <- lapply(summaries_pal_2, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_pal_2 <- lapply(summaries_pal_2, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_pal_2 <- lapply(summaries_pal_2, function(x) x$coefficients[2,4])
+pvalue_pal_2_bon <- as.list(p.adjust(pvalue_pal_2, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_pal_2_fdr <- as.list(p.adjust(pvalue_pal_2, method="BH", n=length(metabolites_matrix)))
+
+
+together_pal <- paste(format(mycoef_pal_2, nsmall=2), " (",
+       format(mylowerbound_pal_2, nsmall=2), "$ ",
+       format(myupperbound_pal_2, nsmall=2), ") ", sep="")
+
+## writing out the results file for pal
+m1_pal <- c()
+m1_pal <- cbind(colnames(metabolites_matrix), mycoef_pal, mylowerbound_pal, myupperbound_pal, pvalue_pal, pvalue_pal_bon, pvalue_pal_fdr, mycoef_pal_2, mylowerbound_pal_2, myupperbound_pal_2, pvalue_pal_2, pvalue_pal_2_bon, pvalue_pal_2_fdr, together_pal)
+colnames(m1_pal) <- c("Metabolite", "OR-mod1", "LB-mod1", "UB-mod1", "p-value-mod1", "p-value-mod1-bon", "p-value-mod1-fdr", "OR-mod2", "LB-mod2", "UB-mod2", "p-value-mod2", "p-value-mod2-bon", "p-value-mod2-fdr", "together")
+
+## Logistic regressions for BMI
+
+log_model1_output_bmi <- lapply(1:ncol(metabolites_matrix), function(x) glm(bmi_factor_op ~ metabolites_matrix[,x] + agemo + fast + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_bmi <- lapply(log_model1_output_bmi, summary)
+mycoef_bmi <- lapply(summaries_bmi, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_bmi <- lapply(summaries_bmi, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_bmi <- lapply(summaries_bmi, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_bmi <- lapply(summaries_bmi, function(x) x$coefficients[2,4])
+pvalue_bmi_bon <- as.list(p.adjust(pvalue_bmi, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_bmi_fdr <- as.list(p.adjust(pvalue_bmi, method="BH", n=length(metabolites_matrix)))
+
+
+log_model2_output_bmi <- lapply(1:ncol(metabolites_matrix), function(x) glm(bmi_factor_op ~ metabolites_matrix[,x] 
+  + fast + agemo + white + AHEI_factor_op + phys_act_factor_op + smoke_factor_op + alco_factor_op + multivit + diab + htn + hchol + hbpmed + cholmed + calor_avg + cacoall + cohort + endpoint, data = datavar, family = "binomial"))
+
+summaries_bmi_2 <- lapply(log_model2_output_bmi, summary)
+mycoef_bmi_2 <- lapply(summaries_bmi_2, function(x) round(exp(x$coefficients[2,1]), 2))
+mylowerbound_bmi_2 <- lapply(summaries_bmi_2, function(x) round(exp(x$coefficients[2,1] -1.96*x$coefficients[2,2]), 2))
+myupperbound_bmi_2 <- lapply(summaries_bmi_2, function(x) round(exp(x$coefficients[2,1] +1.96*x$coefficients[2,2]), 2))
+pvalue_bmi_2 <- lapply(summaries_bmi_2, function(x) x$coefficients[2,4])
+pvalue_bmi_2_bon <- as.list(p.adjust(pvalue_bmi_2, method="bonferroni", n=length(metabolites_matrix))) 
+pvalue_bmi_2_fdr <- as.list(p.adjust(pvalue_bmi_2, method="BH", n=length(metabolites_matrix)))
+
+
+together_bmi <- paste(format(mycoef_bmi_2, nsmall=2), " (",
+       format(mylowerbound_bmi_2, nsmall=2), "$ ",
+       format(myupperbound_bmi_2, nsmall=2), ") ", sep="")
+
+## writing out the results file for bmi
+m1_bmi <- c()
+m1_bmi <- cbind(colnames(metabolites_matrix), mycoef_bmi, mylowerbound_bmi, myupperbound_bmi, pvalue_bmi, pvalue_bmi_bon, pvalue_bmi_fdr, mycoef_bmi_2, mylowerbound_bmi_2, myupperbound_bmi_2, pvalue_bmi_2, pvalue_bmi_2_bon, pvalue_bmi_2_fdr, together_bmi)
+colnames(m1_bmi) <- c("Metabolite", "OR-mod1", "LB-mod1", "UB-mod1", "p-value-mod1", "p-value-mod1-bon", "p-value-mod1-fdr", "OR-mod2", "LB-mod2", "UB-mod2", "p-value-mod2", "p-value-mod2-bon", "p-value-mod2-fdr", "together")
+
+
+### Write excel file with all sheets appended
+
+library(xlsx)
+write.xlsx(m2, file="SupplTables3-8.xlsx", sheetName="Healthy lifestyle", row.names=FALSE)
+write.xlsx(m2_bmi, file="SupplTables3-8.xlsx", sheetName="Normal BMI", append=TRUE, row.names=FALSE)
+write.xlsx(m2_diet, file="SupplTables3-8.xlsx", sheetName="Healthy diet", append=TRUE, row.names=FALSE)
+write.xlsx(m2_alco, file="SupplTables3-8.xlsx", sheetName="Moderate alcohol", append=TRUE, row.names=FALSE)
+write.xlsx(m2_pal, file="SupplTables3-8.xlsx", sheetName="Physical activity", append=TRUE, row.names=FALSE)
+write.xlsx(m2_smoke, file="SupplTables3-8.xlsx", sheetName="Never smoking", append=TRUE, row.names=FALSE)

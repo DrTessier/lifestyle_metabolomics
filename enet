@@ -1,0 +1,98 @@
+### Elastic net regression for the identification of the healthy lifestyle metabolomics signature
+
+library(glmnet)
+library(dplyr)
+
+
+# Create training set and test set (70/30)   
+set.seed(1234)
+n <- floor(nrow(datavar)*0.7)
+train_index <- sample(seq_len(nrow(datavar)), size = n)
+train <- datavar[train_index,]
+test <- datavar[-train_index,]
+
+# Cross-validation in training set 
+
+results_enet_lifestyle = data.frame(repNo=NA,NoMetabs=NA,healthy_lifestyle_cor=NA, mse=NA)
+met_coef_lifestyle = data.frame(metabolite_names=c("intercept",colnames(train[,c(1:243)])))
+
+for (inrep in 1:100) { 
+  
+  ### cross-validation
+  Training_CV = cv.glmnet(as.matrix(train[,c(1:243)]), train[,"healthy_lifestyle_score_AHEI"], nfolds=10, alpha=0.5, family="gaussian")
+  lambda_min_10F = Training_CV$lambda.1se
+
+
+  ### enet model
+  Training_M = glmnet(as.matrix(train[,c(1:243)]), train[,"healthy_lifestyle_score_AHEI"], family="gaussian", alpha=0.5) 
+  cmin = coef(Training_M, s=lambda_min_10F)
+  metabsmin = data.frame(cmin[which(cmin[,1]!=0),])
+  names(metabsmin) = "Test.min"
+  met_coef_lifestyle[,dim(met_coef_lifestyle)[2]+1]=cmin[,1]
+  names(met_coef_lifestyle)[dim(met_coef_lifestyle)[2]] = paste("inrep",inrep,sep='')
+
+
+  # predict the signature in the testing set using the coefficient obtained in training set
+  
+  test[,dim(test)[2]+1] = as.numeric(predict(Training_M, as.matrix(test[,c(1:243)]), type="response", s=lambda_min_10F)[,1])
+  names(test)[dim(test)[2]] = paste("healthy_lifestyle",inrep,sep='') 
+  
+  
+  results_enet_lifestyle[inrep,"repNo"] = paste("inrep",inrep,sep='')
+  results_enet_lifestyle[inrep,"NoMetabs"] = dim(metabsmin)[1]-1 
+  results_enet_lifestyle[inrep,"healthy_lifestyle_cor"] = cor(test[,"healthy_lifestyle_score_AHEI"] #correlation between score obtained from signature and actual score
+ [which(test[,dim(test)[2]]>=0 & test[,dim(test)[2]]<=5)],test[,dim(test)[2]][which(test[,dim(test)[2]]>=0 & test[,dim(test)[2]]<=5)]) #with intercept
+  results_enet_lifestyle[inrep,"mse"] = min(Training_CV$cvm)
+}
+
+
+for (i in 1:dim(train)[1]) {
+  
+  #cross-validation with leave one out for all participants
+  Training = cv.glmnet(as.matrix(train[-i,c(1:243)]), train[-i,"healthy_lifestyle_score_AHEI"], nfolds=10, alpha=0.5, family="gaussian")
+  lambda_min_10F = Training$lambda.1se
+  
+  cmin = coef(Training, s=lambda_min_10F)
+  metabsmin = data.frame(cmin[which(cmin[,1]!=0),])
+  names(metabsmin) = "Test.min"
+  
+  #### apply leave one out
+  
+  if(i==1) {
+    
+    train[i,dim(train)[2]+1] = predict(Training, as.matrix(train[i,c(1:243)]), type="response", s=lambda_min_10F) 
+    
+  } 
+  
+  else if(i>1) {
+    
+    train[i,dim(train)[2]] = predict(Training, as.matrix(train[i,c(1:243)]), type="response", s=lambda_min_10F) 
+  }
+  
+}
+
+table(results_enet_lifestyle$NoMetabs)
+
+lifestyle_predict_score <- test[,c("newid", "healthy_lifestyle_score_AHEI", "cohort", "healthy_lifestyle5")] 
+colnames(lifestyle_predict_score)[4]="healthy_lifestyle_predict_score" 
+met_lifestyle <- as.character(met_coef_lifestyle[-1, ] %>% filter(inrep5!=0) %>% pull(metabolite_names)) 
+lifestyle_coef <- as.character(met_coef_lifestyle[-1, ] %>% filter(inrep5!=0) %>% pull(inrep5)) 
+
+lifestyle_predict_score_training <- train[,c("newid", "healthy_lifestyle_score_AHEI", "cohort", "V306")] #last column of the train dataset
+colnames(lifestyle_predict_score_training)[4]="healthy_lifestyle_predict_score"
+
+gdata::keep(lifestyle_predict_score, lifestyle_predict_score_training, sure=T)
+lifestyle_predict_score$set="Testing" 
+lifestyle_predict_score_training$set="Training" 
+lifestyle <- rbind(lifestyle_predict_score, lifestyle_predict_score_training) %>% arrange(cohort, newid)
+
+
+signature <- cbind(lifestyle[,c("set", "cohort", "newid", "healthy_lifestyle_score_AHEI", "healthy_lifestyle_predict_score")])
+
+## Correlations
+cor.test(signature[signature$set=="Training",]$healthy_lifestyle_predict_score, signature[signature$set=="Training",]$healthy_lifestyle_score_AHEI) 
+cor.test(signature[signature$set=="Testing",]$healthy_lifestyle_predict_score, signature[signature$set=="Testing",]$healthy_lifestyle_score_AHEI) 
+
+
+
+

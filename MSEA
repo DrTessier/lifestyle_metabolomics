@@ -1,0 +1,74 @@
+
+library(Biobase)
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("fgsea")
+library(fgsea)
+library(ggplot2)
+library(grid)
+library(gtable)
+library(gridExtra)
+library(grid)
+library(lattice)
+
+assignClassBasedOnName = function(my.data){
+  my.data[grep(pattern = "*TAG_1",x = my.data$metabolite_name),"class"] = "Triacylglycerols (≤56 C and ≤3 double bonds)"
+  my.data[grep(pattern = "*TAG_2",x = my.data$metabolite_name),"class"] = "Triacylglycerols (>56 C or >3 double bonds)"
+  my.data[grep(pattern = "*DAG*",x = my.data$metabolite_name),"class"] = "Diglycerides"
+  my.data[grep(pattern = "*SM",x = my.data$metabolite_name,ignore.case = F),"class"] = "Sphingomyelins"
+  my.data[grep(pattern = "* PS$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylserines"
+  my.data[grep(pattern = "* PS plasmalogen$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylserine plasmalogens"
+  my.data[grep(pattern = "* LPS",x = my.data$metabolite_name,ignore.case = F),"class"] = "Lysophosphatidylserines"
+  my.data[grep(pattern = "LPS plasmalogen",x = my.data$metabolite_name,ignore.case = F),"class"] = "Lysophosphatidylserine plasmalogens"
+  my.data[grep(pattern = "* CE$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Cholesteryl esters"
+  my.data[grep(pattern = "* PC$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylcholines"
+  my.data[grep(pattern = "* LPC$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Lysophosphatidylcholines"
+  my.data[grep(pattern = "* PC plasmalogen",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylcholine plasmalogens"
+  my.data[grep(pattern = "* PC-[A,B]$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylcholines"
+  my.data[grep(pattern = "* PE$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylethanolamines"
+  my.data[grep(pattern = "* LPE$",x = my.data$metabolite_name,ignore.case = F),"class"] = "Lysophosphatidylethanolamines"
+  my.data[grep(pattern = "* LPE_[i,m]*",x = my.data$metabolite_name,ignore.case = F),"class"] = "Lysophosphatidylethanolamines"
+  my.data[grep(pattern = "* PE plasmalogen",x = my.data$metabolite_name,ignore.case = F),"class"] = "Phosphatidylethanolamine plasmalogens"
+  my.data[grep(pattern = "* LPE plasmalogen",x = my.data$metabolite_name,ignore.case = F),"class"] = "Lysophosphatidylethanolamine plasmalogens"
+  my.data[grep(pattern = "* Ceramide*",x = my.data$metabolite_name,ignore.case = F),"class"] = "Ceramides"
+  return(my.data)
+}
+
+datavar <- assignClassBasedOnName(datavar)
+
+# format annotation to fit the package requirements
+met_classes <- vector("list",length = length(unique(datavar$class)))
+names(met_classes) = unique(datavar$class)
+met_classes[["NA"]] = NULL
+
+for(i in 1:length(met_classes)){
+  met_classes[[i]] <- datavar$metabolite_name[which(datavar$class == names(met_classes)[i])]
+}
+
+
+runFGSEA <- function(pathways = met_classes, 
+                      stats = healthylifestyle_beta, 
+                      minSize=3, 
+                      maxSize=500, 
+                      nPermSimple=1000,
+                      file.result){
+  
+  fgsea_healthylifestyle <- fgseaMultilevel(pathways = pathways, 
+                                  stats = stats, 
+                                  minSize=minSize, 
+                                  maxSize=maxSize,
+                                  nPermSimple=nPermSimple 
+                                  )
+
+  fgsea_healthylifestyle <- fgsea_healthylifestyle[order(fgsea_healthylifestyle$padj),]
+  print <- fgsea_healthylifestyle[,-8]
+  
+  write.table(x = print, file = file.result ,col.names = T, row.names = F, sep = "\t", quote = F)
+  return(print)
+  
+}
+
+
+healthylifestyle_beta <- datavar$Beta.mod2
+names(healthylifestyle_beta) <- datavar$metabolite_name
+
+fgsea_healthylifestyle <- runFGSEA(pathways = met_classes, stats = healthylifestyle_beta, file.result = file.path("path.csv"))

@@ -1,0 +1,364 @@
+### Cox proportional hazard models for the association between the healthy lifestyle metabolomics signature and total and cause-specific mortality
+
+# Convert lifestyle score and signature to Z scores for comparable results (same unit increment)
+datavar$healthy_lifestyle_score_AHEI_std=(datavar$healthy_lifestyle_score_AHEI.x-mean(datavar$healthy_lifestyle_score_AHEI.x))/sd(datavar$healthy_lifestyle_score_AHEI.x)
+
+datavar$healthy_lifestyle_predict_score_std=(datavar$healthy_lifestyle_predict_score-mean(datavar$healthy_lifestyle_predict_score))/sd(datavar$healthy_lifestyle_predict_score)
+
+#format factor variables
+factor=c("white", "fast", "age_2cat", "multivit", "htn", "hchol", "hbpmed", "cholmed", "diab", "cohort",
+         "cacoall", "endpoint", "smoke_factor_op", "bmi_factor_op", "alco_factor_op", "AHEI_factor_op", "phys_act_factor_op")
+for (i in 1:length(factor)){
+  datavar[, factor[i]]=as.factor(datavar[, factor[i]])
+}
+
+
+### Cox proportional hazard models for healthy lifestyle metabolomic signature and all cause mortality
+
+cox_model1_sig <- coxph(Surv(tdead, dead)~ healthy_lifestyle_predict_score_std + fast + strata(cacoall, endpoint, cohort, agemo), data = datavar)
+
+cox_model2_sig <- coxph(Surv(tdead, dead)~ healthy_lifestyle_predict_score_std + fast + white + multivit + htn  + hbpmed +
+                                                                       hchol + cholmed + diab + calor_avg + strata(cacoall, endpoint, cohort, agemo), 
+                                                                        data = datavar)
+
+cox_model3_mutual_adj_sig <- coxph(Surv(tdead, dead)~ healthy_lifestyle_predict_score_std + fast + white + multivit + htn  + hbpmed +
+                                                                       hchol + cholmed + diab + calor_avg + strata(cacoall, endpoint, cohort, agemo) + healthy_lifestyle_score_AHEI_std, 
+                                                                        data = datavar)
+# Assumption testing #
+cox.zph(cox_model1_sig)
+cox.zph(cox_model2_sig)
+cox.zph(cox_model3_mutual_adj_sig)
+
+#extract coefficients for model1
+coef1_sig_dead <- summary(cox_model1_sig)$coefficients[1,1]
+
+mycoef_1_sig <- round(exp(coef1_sig_dead),2)
+mylowerbound_1_sig <- round(exp(coef1_sig_dead-(1.96*summary(cox_model1_sig)$coefficients[1,3])), 2)
+myupperbound_1_sig <- round(exp(coef1_sig_dead+(1.96*summary(cox_model1_sig)$coefficients[1,3])), 2)
+pvalue_1_sig <- round((summary(cox_model1_sig)$coefficients[1,5]), 10)
+results_model1_sig <- paste(format(mycoef_1_sig, nsmall=2), " (",
+       format(mylowerbound_1_sig, nsmall=2), ", ",
+       format(myupperbound_1_sig, nsmall=2), ") ", sep="")
+
+#extract coefficients for model2
+coef2_sig_dead <- summary(cox_model2_sig)$coefficients[1,1]
+
+mycoef_2_sig <- round(exp(coef2_sig_dead),2)
+mylowerbound_2_sig <- round(exp(coef2_sig_dead-(1.96*summary(cox_model2_sig)$coefficients[1,3])), 2)
+myupperbound_2_sig <- round(exp(coef2_sig_dead+(1.96*summary(cox_model2_sig)$coefficients[1,3])), 2)
+pvalue_2_sig <- round((summary(cox_model2_sig)$coefficients[1,5]), 10)
+results_model2_sig <- paste(format(mycoef_2_sig, nsmall=2), " (",
+       format(mylowerbound_2_sig, nsmall=2), ", ",
+       format(myupperbound_2_sig, nsmall=2), ") ", sep="")
+
+#extract coefficients for model3
+coef3_sig_dead <- summary(cox_model3_mutual_adj_sig)$coefficients[1,1]
+
+mycoef_3_sig <- round(exp(coef3_sig_dead),2)
+mylowerbound_3_sig <- round(exp(coef3_sig_dead-(1.96*summary(cox_model3_mutual_adj_sig)$coefficients[1,3])), 2)
+myupperbound_3_sig <- round(exp(coef3_sig_dead+(1.96*summary(cox_model3_mutual_adj_sig)$coefficients[1,3])), 2)
+pvalue_3_sig <- round((summary(cox_model3_mutual_adj_sig)$coefficients[1,5]), 10)
+results_model3_sig <- paste(format(mycoef_3_sig, nsmall=2), " (",
+       format(mylowerbound_3_sig, nsmall=2), ", ",
+       format(myupperbound_3_sig, nsmall=2), ") ", sep="")
+
+
+
+### Cox proportional hazard models for healthy lifestyle metabolomic signature and cancer mortality
+
+cox_model1_sig_can <- coxph(Surv(tdead, dead_can)~ healthy_lifestyle_predict_score_std + fast + strata(cacoall, cohort, endpoint, agemo), data = datavar)
+
+cox_model2_sig_can <- coxph(Surv(tdead, dead_can)~ healthy_lifestyle_predict_score_std + fast + white + multivit + #0.91, pval NS 0.19
+                                                                        hchol + cholmed + diab + htn + hbpmed + 
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo), 
+                                                                        data = datavar)
+
+cox_model3_mutual_adj_sig_can <- coxph(Surv(tdead, dead_can)~ healthy_lifestyle_predict_score_std + fast + white + multivit + # 1.01, pval NS 0.94
+                                                                         hchol + cholmed + diab + htn + hbpmed +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo) + healthy_lifestyle_score_AHEI_std, 
+                                                                        data = datavar)
+
+# Assumption testing #
+cox.zph(cox_model1_sig_can)
+cox.zph(cox_model2_sig_can)
+cox.zph(cox_model3_mutual_adj_sig_can)
+
+
+#extract coefficients for model1
+coef1_sig_dcan <- summary(cox_model1_sig_can)$coefficients[1,1]
+
+mycoef_1_sig_can <- round(exp(coef1_sig_dcan),2)
+mylowerbound_1_sig_can <- round(exp(coef1_sig_dcan-(1.96*summary(cox_model1_sig_can)$coefficients[1,3])), 2)
+myupperbound_1_sig_can <- round(exp(coef1_sig_dcan+(1.96*summary(cox_model1_sig_can)$coefficients[1,3])), 2)
+pvalue_1_sig_can <- round((summary(cox_model1_sig_can)$coefficients[1,5]), 10)
+results_model1_sig_can <- paste(format(mycoef_1_sig_can, nsmall=2), " (",
+       format(mylowerbound_1_sig_can, nsmall=2), ", ",
+       format(myupperbound_1_sig_can, nsmall=2), ") ", sep="")
+
+#extract coefficients for model2
+coef2_sig_dcan <- summary(cox_model2_sig_can)$coefficients[1,1]
+
+mycoef_2_sig_can <- round(exp(coef2_sig_dcan),2)
+mylowerbound_2_sig_can <- round(exp(coef2_sig_dcan-(1.96*summary(cox_model2_sig_can)$coefficients[1,3])), 2)
+myupperbound_2_sig_can <- round(exp(coef2_sig_dcan+(1.96*summary(cox_model2_sig_can)$coefficients[1,3])), 2)
+pvalue_2_sig_can <- round((summary(cox_model2_sig_can)$coefficients[1,5]), 10)
+results_model2_sig_can <- paste(format(mycoef_2_sig_can, nsmall=2), " (",
+       format(mylowerbound_2_sig_can, nsmall=2), ", ",
+       format(myupperbound_2_sig_can, nsmall=2), ") ", sep="")
+
+#extract coefficients for model3
+coef3_sig_dcan <- summary(cox_model3_mutual_adj_sig_can)$coefficients[1,1]
+
+mycoef_3_sig_can <- round(exp(coef3_sig_dcan),2)
+mylowerbound_3_sig_can <- round(exp(coef3_sig_dcan-(1.96*summary(cox_model3_mutual_adj_sig_can)$coefficients[1,3])), 2)
+myupperbound_3_sig_can <- round(exp(coef3_sig_dcan+(1.96*summary(cox_model3_mutual_adj_sig_can)$coefficients[1,3])), 2)
+pvalue_3_sig_can <- round((summary(cox_model3_mutual_adj_sig_can)$coefficients[1,5]), 10)
+results_model3_sig_can <- paste(format(mycoef_3_sig_can, nsmall=2), " (",
+       format(mylowerbound_3_sig_can, nsmall=2), ", ",
+       format(myupperbound_3_sig_can, nsmall=2), ") ", sep="")
+
+
+
+cox_model1_sig_cvd <- coxph(Surv(tdead, dead_cvd)~ healthy_lifestyle_predict_score_std + fast + strata(cacoall, cohort, endpoint, agemo), data = AllCohorts_mortality) 
+
+
+
+### Cox proportional hazard models for healthy lifestyle metabolomic signature and CVD mortality
+
+cox_model2_sig_cvd <- coxph(Surv(tdead, dead_cvd)~ healthy_lifestyle_predict_score_std + fast + white + multivit + #0.66, pval below 0.0001
+                                                                        hchol  + diab + htn + hbpmed + cholmed +
+                                                                       strata(cacoall, endpoint, agemo, cohort), 
+                                                                        data = AllCohorts_mortality)
+
+cox_model3_mutual_adj_sig_cvd <- coxph(Surv(tdead, dead_cvd)~ healthy_lifestyle_predict_score_std + fast + white + multivit + #0.71, pval=0.005
+                                                                        hchol + diab + htn + hbpmed + cholmed +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo) + healthy_lifestyle_score_AHEI_std, 
+                                                                        data = AllCohorts_mortality)
+
+# Assumption testing #
+cox.zph(cox_model1_sig_cvd)
+cox.zph(cox_model2_sig_cvd)
+cox.zph(cox_model3_mutual_adj_sig_cvd)
+
+
+#extract coefficients for model1
+coef1_sig_dcvd <- summary(cox_model1_sig_cvd)$coefficients[1,1]
+
+mycoef_1_sig_cvd <- round(exp(coef1_sig_dcvd),2)
+mylowerbound_1_sig_cvd <- round(exp(coef1_sig_dcvd-(1.96*summary(cox_model1_sig_cvd)$coefficients[1,3])), 2)
+myupperbound_1_sig_cvd <- round(exp(coef1_sig_dcvd+(1.96*summary(cox_model1_sig_cvd)$coefficients[1,3])), 2)
+pvalue_1_sig_cvd <- round((summary(cox_model1_sig_cvd)$coefficients[1,5]), 10)
+results_model1_sig_cvd <- paste(format(mycoef_1_sig_cvd, nsmall=2), " (",
+       format(mylowerbound_1_sig_cvd, nsmall=2), ", ",
+       format(myupperbound_1_sig_cvd, nsmall=2), ") ", sep="")
+
+#extract coefficients for model2
+coef2_sig_dcvd <- summary(cox_model2_sig_cvd)$coefficients[1,1]
+
+mycoef_2_sig_cvd <- round(exp(coef2_sig_dcvd),2)
+mylowerbound_2_sig_cvd <- round(exp(coef2_sig_dcvd-(1.96*summary(cox_model2_sig_cvd)$coefficients[1,3])), 2)
+myupperbound_2_sig_cvd <- round(exp(coef2_sig_dcvd+(1.96*summary(cox_model2_sig_cvd)$coefficients[1,3])), 2)
+pvalue_2_sig_cvd <- round((summary(cox_model2_sig_cvd)$coefficients[1,5]), 10)
+results_model2_sig_cvd <- paste(format(mycoef_2_sig_cvd, nsmall=2), " (",
+       format(mylowerbound_2_sig_cvd, nsmall=2), ", ",
+       format(myupperbound_2_sig_cvd, nsmall=2), ") ", sep="")
+
+#extract coefficients for model3
+coef3_sig_dcvd <- summary(cox_model3_mutual_adj_sig_cvd)$coefficients[1,1]
+
+mycoef_3_sig_cvd <- round(exp(coef3_sig_dcvd),2)
+mylowerbound_3_sig_cvd <- round(exp(coef3_sig_dcvd-(1.96*summary(cox_model3_mutual_adj_sig_cvd)$coefficients[1,3])), 2)
+myupperbound_3_sig_cvd <- round(exp(coef3_sig_dcvd+(1.96*summary(cox_model3_mutual_adj_sig_cvd)$coefficients[1,3])), 2)
+pvalue_3_sig_cvd <- round((summary(cox_model3_mutual_adj_sig_cvd)$coefficients[1,5]), 10)
+results_model3_sig_cvd <- paste(format(mycoef_3_sig_cvd, nsmall=2), " (",
+       format(mylowerbound_3_sig_cvd, nsmall=2), ", ",
+       format(myupperbound_3_sig_cvd, nsmall=2), ") ", sep="")
+
+
+
+### Cox proportional hazard models for self-reported healthy lifestyle and all-cause mortality
+
+cox_model1_score <- coxph(Surv(tdead, dead)~ healthy_lifestyle_score_AHEI_std + fast + strata(cacoall, cohort, endpoint, agemo), data = datavar)
+
+cox_model2_score <- coxph(Surv(tdead, dead)~ healthy_lifestyle_score_AHEI_std + fast + white + multivit +
+                                                                        htn + hchol + hbpmed + cholmed + diab +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo), 
+                                                                        data = datavar)
+
+cox_model3_mutual_adj_score <- coxph(Surv(tdead, dead)~ healthy_lifestyle_score_AHEI_std + fast + white + multivit +
+                                                                        htn + hchol + hbpmed + cholmed + diab + 
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo) + healthy_lifestyle_predict_score_std, 
+                                                                        data = datavar)
+
+#extract coefficients for model1
+coef1_score_dead <- summary(cox_model1_score)$coefficients[1,1]
+
+mycoef_1_score <- round(exp(coef1_score_dead),2)
+mylowerbound_1_score <- round(exp(coef1_score_dead-(1.96*summary(cox_model1_score)$coefficients[1,3])), 2)
+myupperbound_1_score <- round(exp(coef1_score_dead+(1.96*summary(cox_model1_score)$coefficients[1,3])), 2)
+pvalue_1_score <- round((summary(cox_model1_score)$coefficients[1,5]), 10)
+results_model1_score <- paste(format(mycoef_1_score, nsmall=2), " (",
+       format(mylowerbound_1_score, nsmall=2), ", ",
+       format(myupperbound_1_score, nsmall=2), ") ", sep="")
+
+#extract coefficients for model2
+coef2_score_dead <- summary(cox_model2_score)$coefficients[1,1]
+
+mycoef_2_score <- round(exp(coef2_score_dead),2)
+mylowerbound_2_score <- round(exp(coef2_score_dead-(1.96*summary(cox_model2_score)$coefficients[1,3])), 2)
+myupperbound_2_score <- round(exp(coef2_score_dead+(1.96*summary(cox_model2_score)$coefficients[1,3])), 2)
+pvalue_2_score <- round((summary(cox_model2_score)$coefficients[1,5]), 10)
+results_model2_score <- paste(format(mycoef_2_score, nsmall=2), " (",
+       format(mylowerbound_2_score, nsmall=2), ", ",
+       format(myupperbound_2_score, nsmall=2), ") ", sep="")
+
+#extract coefficients for model3
+coef3_score_dead <- summary(cox_model3_mutual_adj_score)$coefficients[1,1]
+
+mycoef_3_score <- round(exp(coef3_score_dead),2)
+mylowerbound_3_score <- round(exp(coef3_score_dead-(1.96*summary(cox_model3_mutual_adj_score)$coefficients[1,3])), 2)
+myupperbound_3_score <- round(exp(coef3_score_dead+(1.96*summary(cox_model3_mutual_adj_score)$coefficients[1,3])), 2)
+pvalue_3_score <- round((summary(cox_model3_mutual_adj_score)$coefficients[1,5]), 10)
+results_model3_score <- paste(format(mycoef_3_score, nsmall=2), " (",
+       format(mylowerbound_3_score, nsmall=2), ", ",
+       format(myupperbound_3_score, nsmall=2), ") ", sep="")
+
+# Assumption testing #
+cox.zph(cox_model1_score)
+cox.zph(cox_model2_score)
+cox.zph(cox_model3_mutual_adj_score)
+
+
+
+### Cox proportional hazard models for self-reported healthy lifestyle and cancer mortality
+
+cox_model1_score_can <- coxph(Surv(tdead, dead_can)~ healthy_lifestyle_score_AHEI_std + fast + strata(cacoall, cohort, endpoint, agemo), data = datavar)
+
+cox_model2_score_can <- coxph(Surv(tdead, dead_can)~ healthy_lifestyle_score_AHEI_std + fast + white + multivit +
+                                                                        htn + hchol + hbpmed + cholmed + diab +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo), 
+                                                                        data = datavar)
+
+cox_model3_mutual_adj_score_can <- coxph(Surv(tdead, dead_can)~ healthy_lifestyle_score_AHEI_std + fast + white + multivit +
+                                                                        htn + hchol + hbpmed + cholmed + diab +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo) + healthy_lifestyle_predict_score_std, 
+                                                                        data = datavar)
+
+
+#extract coefficients for model1
+coef1_score_dcan <- summary(cox_model1_score_can)$coefficients[1,1]
+
+mycoef_1_score_can <- round(exp(coef1_score_dcan),2)
+mylowerbound_1_score_can <- round(exp(coef1_score_dcan-(1.96*summary(cox_model1_score_can)$coefficients[1,3])), 2)
+myupperbound_1_score_can <- round(exp(coef1_score_dcan+(1.96*summary(cox_model1_score_can)$coefficients[1,3])), 2)
+pvalue_1_score_can <- round((summary(cox_model1_score_can)$coefficients[1,5]), 10)
+results_model1_score_can <- paste(format(mycoef_1_score_can, nsmall=2), " (",
+       format(mylowerbound_1_score_can, nsmall=2), ", ",
+       format(myupperbound_1_score_can, nsmall=2), ") ", sep="")
+
+#extract coefficients for model2
+coef2_score_dcan <- summary(cox_model2_score_can)$coefficients[1,1]
+
+mycoef_2_score_can <- round(exp(coef2_score_dcan),2)
+mylowerbound_2_score_can <- round(exp(coef2_score_dcan-(1.96*summary(cox_model2_score_can)$coefficients[1,3])), 2)
+myupperbound_2_score_can <- round(exp(coef2_score_dcan+(1.96*summary(cox_model2_score_can)$coefficients[1,3])), 2)
+pvalue_2_score_can <- round((summary(cox_model2_score_can)$coefficients[1,5]), 10)
+results_model2_score_can <- paste(format(mycoef_2_score_can, nsmall=2), " (",
+       format(mylowerbound_2_score_can, nsmall=2), ", ",
+       format(myupperbound_2_score_can, nsmall=2), ") ", sep="")
+
+#extract coefficients for model3
+coef3_score_dcan <- summary(cox_model3_mutual_adj_score_can)$coefficients[1,1]
+
+mycoef_3_score_can <- round(exp(coef3_score_dcan),2)
+mylowerbound_3_score_can <- round(exp(coef3_score_dcan-(1.96*summary(cox_model3_mutual_adj_score_can)$coefficients[1,3])), 2)
+myupperbound_3_score_can <- round(exp(coef3_score_dcan+(1.96*summary(cox_model3_mutual_adj_score_can)$coefficients[1,3])), 2)
+pvalue_3_score_can <- round((summary(cox_model3_mutual_adj_score_can)$coefficients[1,5]), 10)
+results_model3_score_can <- paste(format(mycoef_3_score_can, nsmall=2), " (",
+       format(mylowerbound_3_score_can, nsmall=2), ", ",
+       format(myupperbound_3_score_can, nsmall=2), ") ", sep="")
+
+# Assumption testing #
+cox.zph(cox_model1_score_can)
+cox.zph(cox_model2_score_can)
+cox.zph(cox_model3_mutual_adj_score_can)
+
+
+
+
+### Cox proportional hazard models for self-reported healthy lifestyle and CVD mortality
+
+cox_model1_score_cvd <- coxph(Surv(tdead, dead_cvd)~ healthy_lifestyle_score_AHEI_std + fast + strata(cacoall, cohort, endpoint, agemo), data = datavar)
+
+cox_model2_score_cvd <- coxph(Surv(tdead, dead_cvd)~ healthy_lifestyle_score_AHEI_std + fast + white + multivit +
+                                                                        htn + hchol + hbpmed + cholmed + diab +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo), 
+                                                                        data = datavar)
+
+cox_model3_mutual_adj_score_cvd <- coxph(Surv(tdead, dead_cvd)~ healthy_lifestyle_score_AHEI_std + fast + white + multivit +
+                                                                        htn + hchol + hbpmed + cholmed + diab +
+                                                                        calor_avg + strata(cacoall, cohort, endpoint, agemo) + healthy_lifestyle_predict_score_std, 
+                                                                        data = datavar)
+
+
+#extract coefficients for model1
+coef1_score_dcvd <- summary(cox_model1_score_cvd)$coefficients[1,1]
+
+mycoef_1_score_cvd <- round(exp(coef1_score_dcvd),2)
+mylowerbound_1_score_cvd <- round(exp(coef1_score_dcvd-(1.96*summary(cox_model1_score_cvd)$coefficients[1,3])), 2)
+myupperbound_1_score_cvd <- round(exp(coef1_score_dcvd+(1.96*summary(cox_model1_score_cvd)$coefficients[1,3])), 2)
+pvalue_1_score_cvd <- round((summary(cox_model1_score_cvd)$coefficients[1,5]), 10)
+results_model1_score_cvd <- paste(format(mycoef_1_score_cvd, nsmall=2), " (",
+       format(mylowerbound_1_score_cvd, nsmall=2), ", ",
+       format(myupperbound_1_score_cvd, nsmall=2), ") ", sep="")
+
+#extract coefficients for model2
+coef2_score_dcvd <- summary(cox_model2_score_cvd)$coefficients[1,1]
+
+mycoef_2_score_cvd <- round(exp(coef2_score_dcvd),2)
+mylowerbound_2_score_cvd <- round(exp(coef2_score_dcvd-(1.96*summary(cox_model2_score_cvd)$coefficients[1,3])), 2)
+myupperbound_2_score_cvd <- round(exp(coef2_score_dcvd+(1.96*summary(cox_model2_score_cvd)$coefficients[1,3])), 2)
+pvalue_2_score_cvd <- round((summary(cox_model2_score_cvd)$coefficients[1,5]), 10)
+results_model2_score_cvd <- paste(format(mycoef_2_score_cvd, nsmall=2), " (",
+       format(mylowerbound_2_score_cvd, nsmall=2), ", ",
+       format(myupperbound_2_score_cvd, nsmall=2), ") ", sep="")
+
+#extract coefficients for model3
+coef3_score_dcvd <- summary(cox_model3_mutual_adj_score_cvd)$coefficients[1,1]
+
+mycoef_3_score_cvd <- round(exp(coef3_score_dcvd),2)
+mylowerbound_3_score_cvd <- round(exp(coef3_score_dcvd-(1.96*summary(cox_model3_mutual_adj_score_cvd)$coefficients[1,3])), 2)
+myupperbound_3_score_cvd <- round(exp(coef3_score_dcvd+(1.96*summary(cox_model3_mutual_adj_score_cvd)$coefficients[1,3])), 2)
+pvalue_3_score_cvd <- round((summary(cox_model3_mutual_adj_score_cvd)$coefficients[1,5]), 10)
+results_model3_score_cvd <- paste(format(mycoef_3_score_cvd, nsmall=2), " (",
+       format(mylowerbound_3_score_cvd, nsmall=2), ", ",
+       format(myupperbound_3_score_cvd, nsmall=2), ") ", sep="")
+
+
+# Assumption testing #
+cox.zph(cox_model1_score_cvd)
+cox.zph(cox_model2_score_cvd)
+cox.zph(cox_model3_mutual_adj_score_cvd)
+
+
+###################################################
+### Combine coefficients and input in dataframe ###
+###################################################
+
+row1 <- c("", "Low-risk lifestyle score", "", "Metabolite profile score", "")
+row2 <-c("", "HR (95%CI)", "P value", "HR (95%CI)", "P value")
+row3 <- c("All-cause mortality", "", "", "", "")
+row4 <- c("Age-adjusted", results_model1_score, round(pvalue_1_score, 3), results_model1_sig, round(pvalue_1_sig, 3))
+row5 <- c("MV", results_model2_score, round(pvalue_2_score, 3), results_model2_sig, round(pvalue_2_sig, 3))
+row6 <- c("MV+mutual adjustment", results_model3_score, round(pvalue_3_score, 3), results_model3_sig, round(pvalue_3_sig, 3))
+row7 <- c("CVD mortality", "", "", "", "")
+row8 <- c("Age-adjusted", results_model1_score_cvd, round(pvalue_1_score_cvd, 3), results_model1_sig_cvd, round(pvalue_1_sig_cvd, 3))
+row9 <- c("MV", results_model2_score_cvd, round(pvalue_2_score_cvd, 3), results_model2_sig_cvd, round(pvalue_2_sig_cvd, 3))
+row10 <- c("MV+mutual adjustment", results_model3_score_cvd, round(pvalue_3_score_cvd, 3), results_model3_sig_cvd, round(pvalue_3_sig_cvd, 3))
+row11 <- c("Cancer mortality", "", "", "", "")
+row12 <- c("Age-adjusted", results_model1_score_can, round(pvalue_1_score_can, 3), results_model1_sig_can, round(pvalue_1_sig_can, 3))
+row13 <- c("MV", results_model2_score_can, round(pvalue_2_score_can, 3), results_model2_sig_can, round(pvalue_2_sig_can, 3))
+row14 <- c("MV+mutual adjustment", results_model3_score_can, round(pvalue_3_score_can, 3), results_model3_sig_can, round(pvalue_3_sig_can, 3))
+
+       
+Table3 <- rbind(row1, row2, row3, row4, row5, row6, row7, row8, row9, row10, row11, row12, row13, row14)

@@ -1,0 +1,28 @@
+### Mediation analyses of the association between the self-reported healthy lifestyle score and mortality and longevity by the healthy lifestyle metabolomics signature 
+
+data datavar;
+      set datavar end=_end_;
+      if cohort="hpfs" then cohort=1;
+      else if cohort="nhs1" then cohort=2; 
+      else if cohort="nhs2" then cohort=3;
+
+
+      %indic3(vbl=white, prefix=white, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=fast, prefix=fast, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=multivit, prefix=multivit, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=diab, prefix=diab, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=htn, prefix=htn, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=hchol, prefix=hchol, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=hbpmed, prefix=hbpmed, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=cholmed, prefix=cholmed, min=1, max=1, reflev=0, missing=., usemiss=0);
+      %indic3(vbl=cohort, prefix=cohort, min=1, max=3, reflev=1, missing=., usemiss=0);
+       %indic3(vbl=cacoall, prefix=cacoall, min=1, max=2, reflev=1, missing=., usemiss=0);
+run;
+
+%LET covar =agemo &white_ &fast_ &multivit_ &diab_ &htn_ &hchol_ &hbpmed_ &cholmed_ calor_avg ;
+
+proc printto print='mortality_mediation_results' new;
+    %mediate(data=datavar, exposure=self_HL_std, intermed=met_sig_std, id=newid, time=tdead, event=dead, strata=cacoall cohort endpoint agemo, covars= &covar);
+
+proc printto print='longevity_mediation_results' new;
+      %mediate(data=datavar, exposure=self_HL_std, intermed=met_sig_std, id=newid, time=tlong, event=dead_85y, strata=cacoall cohort endpoint agemo, covars= &covar);
